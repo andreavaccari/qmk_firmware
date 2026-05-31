@@ -1,0 +1,49 @@
+[env]
+QMK_ROOT = "{{ config_root }}/../../../../../../.."
+QMK_HOME = "{{ env.QMK_ROOT }}"
+
+# QMK's Homebrew ARM/AVR compiler formulas are keg-only, so they are not on
+# PATH by default even when installed. The QMK CLI and cross-compilers are
+# managed by Homebrew; mise only provides keymap-local task wrappers.
+_.path = [
+  "{{ get_env(name='HOMEBREW_PREFIX', default='/opt/homebrew') }}/opt/arm-none-eabi-binutils/bin",
+  "{{ get_env(name='HOMEBREW_PREFIX', default='/opt/homebrew') }}/opt/arm-none-eabi-gcc@8/bin",
+  "{{ get_env(name='HOMEBREW_PREFIX', default='/opt/homebrew') }}/opt/avr-binutils/bin",
+  "{{ get_env(name='HOMEBREW_PREFIX', default='/opt/homebrew') }}/opt/avr-gcc@8/bin",
+]
+
+[tasks.doctor]
+description = "Run QMK diagnostics with repo-local QMK_HOME"
+dir = "{{ env.QMK_ROOT }}"
+run = '''
+status=0
+qmk doctor || status=$?
+
+# QMK Doctor returns 1 for warnings such as a dirty working tree. Keep hard
+# failures fatal.
+if [ "$status" -eq 2 ]; then
+  exit 2
+fi
+exit 0
+'''
+
+[tasks.compile]
+description = "Compile the andreavaccari K3 Pro ANSI white keymap"
+dir = "{{ env.QMK_ROOT }}"
+run = "make keychron/k3_pro/ansi/white:andreavaccari"
+
+[tasks.flash]
+description = "Flash the andreavaccari K3 Pro ANSI white keymap"
+dir = "{{ env.QMK_ROOT }}"
+run = '''
+printf '%s\n' \
+  'Set keyboard in DFU mode:' \
+  '- Connect USB cable' \
+  '- Move switch to "Off"' \
+  '- Hold Esc key or reset button under space bar' \
+  '- Move switch to "Cable"' \
+  'Press Enter to continue.'
+read -r
+
+make keychron/k3_pro/ansi/white:andreavaccari:flash
+'''
